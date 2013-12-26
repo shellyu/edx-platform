@@ -5,6 +5,9 @@ These are notable changes in edx-platform.  This is a rolling list of changes,
 in roughly chronological order, most recent first.  Add your entries at or near
 the top.  Include a label indicating the component affected.
 
+Blades: Change the track field to a dropdown that will allow students
+to download the transcript of the video without timecodes. BLD-368.
+
 Common: Add feature flags to allow developer use of pure XBlocks
   - ALLOW_ALL_ADVANCED_COMPONENTS disables the hard-coded list of advanced
     components in Studio, and allows any xblock to be added as an

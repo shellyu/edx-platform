@@ -13,20 +13,26 @@ in XML.
 import json
 import logging
 
+from HTMLParser import HTMLParser
 from lxml import etree
 from pkg_resources import resource_string
 import datetime
-import time
 import copy
+from webob import Response
 
 from django.http import Http404
 from django.conf import settings
 
-from xmodule.x_module import XModule
+from xmodule.x_module import XModule, module_attr
 from xmodule.editing_module import TabsEditingDescriptor
 from xmodule.raw_module import EmptyDataRawDescriptor
 from xmodule.xml_module import is_pointer_tag, name_to_pathname, deserialize_field
 from xmodule.modulestore import Location
+from xmodule.contentstore.django import contentstore
+from xmodule.contentstore.content import StaticContent
+from xmodule.exceptions import NotFoundError
+from xblock.core import XBlock
+from xmodule.modulestore.inheritance import own_metadata
 from xblock.fields import Scope, String, Boolean, List, Integer, ScopeIds
 from xmodule.fields import RelativeTime
 
@@ -105,10 +111,16 @@ class VideoFields(object):
         scope=Scope.settings,
     )
     track = String(
-        help="The external URL to download the timed transcript track. This appears as a link beneath the video.",
+        help="The external URL to download the timed transcript track.",
         display_name="Download Transcript",
         scope=Scope.settings,
-        default=""
+        default=''
+    )
+    download_track = Boolean(
+        help="Allow to download the timed transcript track. This appears as a link beneath the video.",
+        display_name="Allow to Download Transcript",
+        scope=Scope.settings,
+        default=False
     )
     sub = String(
         help="The name of the timed transcript track (for non-Youtube videos).",
@@ -160,18 +172,29 @@ class VideoModule(VideoFields, XModule):
         raise Http404()
 
     def get_html(self):
+        track_url = None
         caption_asset_path = "/static/subs/"
 
         get_ext = lambda filename: filename.rpartition('.')[-1]
         sources = {get_ext(src): src for src in self.html5_sources}
         sources['main'] = self.source
 
+        metadata_fields = self.descriptor.editable_metadata_fields
+        download_track = metadata_fields['download_track']
+        track = metadata_fields.get('track', None)
+
+        if download_track['value']:
+            if track and track['value']:
+                track_url = track['value']
+            elif self.sub:
+                track_url = self.runtime.handler_url(self, 'download_transcript').rstrip('/?')
+
         return self.system.render_template('video.html', {
             'youtube_streams': _create_youtube_string(self),
             'id': self.location.html_id(),
             'sub': self.sub,
             'sources': sources,
-            'track': self.track,
+            'track': track_url,
             'display_name': self.display_name_with_default,
             # This won't work when we move to data that
             # isn't on the filesystem
@@ -187,10 +210,54 @@ class VideoModule(VideoFields, XModule):
             'yt_test_url': settings.YOUTUBE_TEST_URL
         })
 
+    def get_transcript(self, subs_id):
+        '''
+        Returns transcript without timecodes.
+
+        Args:
+            `subs_id`: str, subtitles id
+
+        Raises:
+            - NotFoundError if cannot find transcript file in storage.
+            - ValueError if transcript file is incorrect JSON.
+            - KeyError if transcript file has incorrect format.
+        '''
+
+        filename = 'subs_{0}.srt.sjson'.format(subs_id)
+        content_location = StaticContent.compute_location(
+            self.location.org, self.location.course, filename
+        )
+
+        data = contentstore().find(content_location).data
+        text = json.loads(data)['text']
+
+        return HTMLParser().unescape("\n".join(text))
+
+
+    @XBlock.handler
+    def download_transcript(self, __, ___):
+        """
+        This is called to get transcript file without timecodes to student.
+        """
+        try:
+            subs = self.get_transcript(self.sub)
+        except (NotFoundError):
+            log.debug("Can't find content in storage for %s transcript", self.sub)
+            return Response(status=404)
+        except (ValueError, KeyError):
+            log.debug("Invalid transcript JSON.")
+            return Response(status=400)
+
+        return Response(subs, content_type='text/plain',
+            headerlist=[
+                ('Content-Disposition', 'attachment; name="{}.txt"'.format(self.sub))
+            ])
+
 
 class VideoDescriptor(VideoFields, TabsEditingDescriptor, EmptyDataRawDescriptor):
     """Descriptor for `VideoModule`."""
     module_class = VideoModule
+    download_transcript = module_attr('download_transcript')
 
     tabs = [
         {
@@ -264,6 +331,7 @@ class VideoDescriptor(VideoFields, TabsEditingDescriptor, EmptyDataRawDescriptor
             'start_time': self.start_time,
             'end_time': self.end_time,
             'sub': self.sub,
+            'download_track': json.dumps(self.download_track),
         }
         for key, value in attrs.items():
             # Mild workaround to ensure that tests pass -- if a field
@@ -281,6 +349,7 @@ class VideoDescriptor(VideoFields, TabsEditingDescriptor, EmptyDataRawDescriptor
             ele = etree.Element('track')
             ele.set('src', self.track)
             xml.append(ele)
+
         return xml
 
     def get_context(self):
@@ -403,6 +472,53 @@ class VideoDescriptor(VideoFields, TabsEditingDescriptor, EmptyDataRawDescriptor
                 field_data[attr] = value
 
         return field_data
+
+    def update_field(self, field_name, value):
+        '''
+        Saves xblock with new updated field value.
+        Using `self` instead of `item` doesn't work in tests.
+        '''
+        try:
+            store = self.system.modulestore
+            item = store.get_item(self.location)
+            field = self.fields[field_name]
+            # update existing metadata
+            field.write_to(item, value)
+        except Exception as err:
+            log.debug(u"Unable to save item.\nERROR:\n{0}".format(str(err)))
+            return
+
+        # Save the data that we've just changed to the underlying
+        # MongoKeyValueStore before we update the mongo datastore.
+        item.save()
+        # commit to datastore
+        store.update_metadata(self.location, own_metadata(item))
+
+    @property
+    def editable_metadata_fields(self):
+        '''
+        `track` is deprecated field.
+        If `track` field exists show `track` field on front-end as not-editable
+        but clearable. Dropdown `download_track` is a new field and it has value
+        True.
+        '''
+        editable_fields = super(VideoDescriptor, self).editable_metadata_fields
+
+        track = editable_fields['track']
+        download_track = editable_fields['download_track']
+
+        if track['value']:
+            if not download_track['explicitly_set']:
+                self.update_field('download_track', True)
+                download_track['value'] = True
+                # Needs to display clear button on frontend
+                download_track['explicitly_set'] = True
+
+            track['non_editable'] = True
+        else:
+            editable_fields.pop('track')
+
+        return editable_fields
 
 
 def _create_youtube_string(module):
