@@ -248,10 +248,14 @@ class VideoModule(VideoFields, XModule):
             log.debug("Invalid transcript JSON.")
             return Response(status=400)
 
-        return Response(subs, content_type='text/plain',
+        response = Response(
+            subs,
             headerlist=[
-                ('Content-Disposition', 'attachment; name="{}.txt"'.format(self.sub))
+                ('Content-Disposition', 'attachment; filename="{0}.txt"'.format(self.sub)),
             ])
+        response.content_type="text/plain; charset=utf-8"
+
+        return response
 
 
 class VideoDescriptor(VideoFields, TabsEditingDescriptor, EmptyDataRawDescriptor):
