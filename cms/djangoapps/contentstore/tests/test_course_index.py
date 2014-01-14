@@ -83,3 +83,24 @@ class TestCourseIndex(CourseTestCase):
 
         # test access
         self.check_index_and_outline(course_staff_client)
+
+    def test_json_responses(self):
+        outline_url = self.course_locator.url_reverse('course/', '')
+        resp = self.client.get(outline_url, HTTP_ACCEPT='application/json')
+        json_response = json.loads(resp.content)
+        self.assert_correct_json_response(json_response)
+
+    def assert_correct_json_response(self, json_response):
+        self.assertIsNotNone(json_response['display_name'])
+        self.assertIsNotNone(json_response['id'])
+        self.assertIsNotNone(json_response['category'])
+        self.assertIsNotNone(json_response['is_draft'])
+        self.assertIsNotNone(json_response['is_container'])
+        if json_response['is_container']:
+            for childResponse in json_response['children']:
+                self.assert_correct_json_response(self, childResponse)
+        else:
+            self.assetIsNone(json_response['children'])
+
+
+

@@ -1,4 +1,4 @@
-define(["jquery", "underscore", "underscore.string", "js/views/baseview"], function($, _, str, BaseView) {
+define(["jquery", "underscore", "underscore.string", "js/views/baseview", "js/views/outline"], function($, _, str, BaseView, OutlineView) {
     var MoveComponentDialog = BaseView.extend({
         events : {
             "click .action-move": "move",
@@ -18,6 +18,8 @@ define(["jquery", "underscore", "underscore.string", "js/views/baseview"], funct
 
         render: function() {
             this.$el.html(this.template());
+            this.outline = new OutlineView({el: $('#move-outline')});
+            this.outline.render();
             return this;
         },
 

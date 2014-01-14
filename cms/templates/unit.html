@@ -11,7 +11,7 @@ from xmodule.modulestore.django import loc_mapper
 <%namespace name='static' file='static_content.html'/>
 
 <%block name="header_extras">
-% for template_name in ["move-component"]:
+% for template_name in ["move-component", "outline"]:
 <script type="text/template" id="${template_name}-tpl">
     <%static:include path="js/${template_name}.underscore" />
 </script>
@@ -29,6 +29,7 @@ require(["domReady!", "jquery", "js/models/module_info", "coffee/src/views/unit"
 
   new UnitEditView({
     el: $('.main-wrapper'),
+    course_outline_url: '${course_outline_url}',
     model: new ModuleModel({
       id: '${unit_locator}',
       state: '${unit_state}'
