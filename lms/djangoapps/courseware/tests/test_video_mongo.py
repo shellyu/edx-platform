@@ -437,8 +437,8 @@ class TestVideoEditableMetadataFields(TestVideoWithPostponeInitalization):
             'download_track': {
                 'default_value': False,
                 'explicitly_set': True,
-                'display_name': 'Allow to Download Transcript',
-                'help': 'Allow to download the transcript track.',
+                'display_name': 'Allow transcript download',
+                'help': 'Allow students to download the timed transcript track for this video.',
                 'type': 'Boolean',
                 'value': False,
                 'field_name': 'download_track',

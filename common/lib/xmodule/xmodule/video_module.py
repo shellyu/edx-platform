@@ -117,8 +117,8 @@ class VideoFields(object):
         default=''
     )
     download_track = Boolean(
-        help="Allow to download the timed transcript track. This appears as a link beneath the video.",
-        display_name="Allow to Download Transcript",
+        help="Allow students to download the timed transcript track for this video. A download link will appear beneath the video.",
+        display_name="Allow transcript download",
         scope=Scope.settings,
         default=False
     )
