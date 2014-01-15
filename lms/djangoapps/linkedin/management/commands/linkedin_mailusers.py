@@ -23,6 +23,7 @@ from boto.ses.exceptions import (
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.template import Context
 from django.template.loader import get_template
 from django.core.urlresolvers import reverse
@@ -115,6 +116,7 @@ class Command(BaseCommand):
     def __init__(self):
         super(Command, self).__init__()
 
+    @transaction.commit_manually
     def handle(self, *args, **options):
         whitelist = settings.LINKEDIN_API['EMAIL_WHITELIST']
         grandfather = options.get('grandfather', False)
@@ -155,14 +157,18 @@ class Command(BaseCommand):
                     for certificate in certificates:
                         success = self.send_triggered_email(user, certificate)
                         emailed.append(certificate.course_id)
-                if success:
+                if success and not mock_run:
                     account.emailed_courses = json.dumps(emailed)
                     account.save()
+                    transaction.commit()
             except BULK_EMAIL_FAILURE_ERRORS:
                 log.exception("LinkedIn: No further email sending will work, aborting")
+                transaction.commit()
                 return -1
             except Exception:
                 log.exception("LinkedIn: User {} couldn't be processed".format(user.username))
+
+        transaction.commit()
 
 
     def certificate_url(self, certificate, grandfather=False):
