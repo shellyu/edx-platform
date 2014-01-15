@@ -1,6 +1,8 @@
-import fs.osfs
+import gettext
 import os
 import os.path
+
+import fs.osfs
 
 from capa.capa_problem import LoncapaProblem, LoncapaSystem
 from mock import Mock, MagicMock
@@ -38,6 +40,7 @@ def test_capa_system():
         can_execute_unsafe_code=lambda: False,
         DEBUG=True,
         filestore=fs.osfs.OSFS(os.path.join(TEST_DIR, "test_files")),
+        i18n=gettext.NullTranslations(),
         node_path=os.environ.get("NODE_PATH", "/usr/local/lib/node_modules"),
         render_template=tst_render_template,
         seed=0,
