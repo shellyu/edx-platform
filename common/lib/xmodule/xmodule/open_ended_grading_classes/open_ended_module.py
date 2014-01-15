@@ -72,9 +72,9 @@ class OpenEndedModule(openendedchild.OpenEndedChild):
         self._parse(oeparam, self.child_prompt, self.child_rubric, system)
 
         if self.child_created is True and self.child_state == self.ASSESSING:
-            self.child_created = False
-            self.send_to_grader(self.latest_answer(), system)
-            self.child_created = False
+            success, message = self.send_to_grader(self.latest_answer(), system)
+            if success:
+                self.child_created = False
 
     def _parse(self, oeparam, prompt, rubric, system):
         '''
