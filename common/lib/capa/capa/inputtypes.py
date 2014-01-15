@@ -837,6 +837,7 @@ class MatlabInput(CodeInput):
         qtime = datetime.utcnow().strftime(xqueue_interface.dateformat)
         callback_url = self.system.xqueue['construct_callback']('ungraded_response')
         anonymous_student_id = self.system.anonymous_student_id
+        # Why is this using self.system.seed when we have self.seed???
         queuekey = xqueue_interface.make_hashkey(str(self.system.seed) + qtime +
                                                  anonymous_student_id +
                                                  self.input_id)
