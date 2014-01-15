@@ -116,6 +116,26 @@ class MailusersTests(TestCase):
             json.loads(self.barney.linkedin.emailed_courses), [])
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_transaction_semantics(self):
+        fut = mailusers.Command().handle
+        with mock.patch('linkedin.management.commands.linkedin_mailusers.Command.send_grandfather_email',
+                        return_value=True, side_effect=[True, KeyboardInterrupt]):
+            try:
+                fut()
+            except KeyboardInterrupt:
+                # expect that this will be uncaught
+
+                # check that fred's emailed_courses were updated
+                self.assertEqual(
+                    json.loads(self.fred.linkedin.emailed_courses), ['TESTX/1/TEST1', 'TESTX/2/TEST2']
+                )
+
+                #check that we did not update barney
+                self.assertEqual(
+                    json.loads(self.barney.linkedin.emailed_courses), []
+                )
+
+
     def test_certificate_url(self):
         self.cert1.created_date = datetime.datetime(
             2010, 8, 15, 0, 0, tzinfo=utc)
