@@ -173,6 +173,14 @@ if Backbone?
         content.addClass("resolved")
       if thread.get('read')
         content.addClass("read")
+      if thread.get('unread_comments_count') > 0
+        content.find('.comments-count').addClass("unread").attr(
+          "data-tooltip",
+          interpolate(
+            ngettext('%s new comment', '%s new comments', thread.get('unread_comments_count')),
+            [thread.get('unread_comments_count')]
+          )
+        )
       @highlight(content)
 
 
@@ -472,4 +480,4 @@ if Backbone?
           error: () =>
             $('input.email-setting').attr('checked','checked')
 
-          
+
