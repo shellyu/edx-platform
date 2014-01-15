@@ -95,18 +95,6 @@ class Command(BaseCommand):
             'their LinkedIn profiles')
     option_list = BaseCommand.option_list + (
         make_option(
-            '--grandfather',
-            action='store_true',
-            dest='grandfather',
-            default=False,
-            help="Creates aggregate invitations for all certificates a user "
-                 "has earned to date and sends a 'grandfather' email.  This is "
-                 "intended to be used when the feature is launched to invite "
-                 "all users that have earned certificates to date to add their "
-                 "certificates.  Afterwards the default, one email per "
-                 "certificate mail form will be used."),)
-    option_list = option_list + (
-        make_option(
             '--mock',
             action='store_true',
             dest='mock_run',
@@ -119,7 +107,6 @@ class Command(BaseCommand):
     @transaction.commit_manually
     def handle(self, *args, **options):
         whitelist = settings.LINKEDIN_API['EMAIL_WHITELIST']
-        grandfather = options.get('grandfather', False)
         mock_run = options.get('mock_run', False)
         accounts = LinkedIn.objects.filter(has_linkedin_account=True)
 
@@ -148,15 +135,10 @@ class Command(BaseCommand):
             # Basic sanity checks passed, now try to send the emails
             try:
                 success = False
-                if grandfather:
-                    success = self.send_grandfather_email(user, certificates, mock_run)
-                    log.info("LinkedIn: Sent email for user {}".format(user.username))
-                    if not mock_run:
-                        emailed.extend([cert.course_id for cert in certificates])
-                else:
-                    for certificate in certificates:
-                        success = self.send_triggered_email(user, certificate)
-                        emailed.append(certificate.course_id)
+                success = self.send_grandfather_email(user, certificates, mock_run)
+                log.info("LinkedIn: Sent email for user {}".format(user.username))
+                if not mock_run:
+                    emailed.extend([cert.course_id for cert in certificates])
                 if success and not mock_run:
                     account.emailed_courses = json.dumps(emailed)
                     account.save()
@@ -171,7 +153,7 @@ class Command(BaseCommand):
         transaction.commit()
 
 
-    def certificate_url(self, certificate, grandfather=False):
+    def certificate_url(self, certificate):
         """
         Generates a certificate URL based on LinkedIn's documentation.  The
         documentation is from a Word document: DAT_DOCUMENTATION_v3.12.docx
@@ -182,7 +164,7 @@ class Command(BaseCommand):
             'prof',  # the 'product'--no idea what that's supposed to mean
             'edX',  # Partner's name
             course.number,  # Certificate's name
-            'gf' if grandfather else 'T'])
+            'gf'])
         query = [
             ('pfCertificationName', course.display_name_with_default),
             ('pfAuthorityName', settings.PLATFORM_NAME),
@@ -221,7 +203,7 @@ class Command(BaseCommand):
                 'course_title': course_title,
                 'course_image_url': course_img_url,
                 'course_end_date': course_end_date,
-                'linkedin_add_url': self.certificate_url(cert, True),
+                'linkedin_add_url': self.certificate_url(cert),
             })
 
         context = {'courses_list': courses_list, 'num_courses': len(courses_list)}
@@ -231,21 +213,6 @@ class Command(BaseCommand):
             return True
         else:
             return self.send_email(user, subject, body)
-
-    def send_triggered_email(self, user, certificate):
-        """
-        Email a user that recently earned a certificate, inviting them to post
-        their certificate on their LinkedIn profile.
-        """
-        template = get_template("linkedin_email.html")
-        url = self.certificate_url(certificate)
-        context = Context({
-            'student_name': user.profile.name,
-            'course_name': certificate.name,
-            'url': url})
-        body = template.render(context)
-        subject = 'Congratulations! Put your certificate on LinkedIn'
-        return self.send_email(user, subject, body)
 
     def send_email(self, user, subject, body, num_attempts=MAX_ATTEMPTS):
         """
