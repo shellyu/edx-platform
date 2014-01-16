@@ -243,8 +243,7 @@ function (VideoPlayer) {
             state.config.sub = '';
             state.config.show_captions = false;
         }
-
-        state.setSpeed($.cookie('video_speed'));
+        state.setSpeed(state.speed);
 
         return true;
     }
@@ -348,6 +347,7 @@ function (VideoPlayer) {
         this.config = {
             element: element,
 
+            saveStateUrl:       data['saveStateUrl'],
             startTime:          data['start'],
             endTime:            data['end'],
             caption_data_dir:   data['captionDataDir'],
@@ -376,6 +376,9 @@ function (VideoPlayer) {
             tempYtTestTimeout = 1500;
         }
         this.config.ytTestTimeout = tempYtTestTimeout;
+
+        this.position = data['position'];
+        this.speed = data['speed'].toFixed(2).replace(/\.00$/, '.0') || '1.0';
 
         if (!(_parseYouTubeIDs(this))) {
 
@@ -580,22 +583,20 @@ function (VideoPlayer) {
         this.speeds = ($.map(this.videos, function (url, speed) {
             return speed;
         })).sort();
-
-        this.setSpeed($.cookie('video_speed'));
     }
 
-    function setSpeed(newSpeed, updateCookie) {
+    function setSpeed(newSpeed) {
+        // html5 = [0.5, 1, 1.25, 1.5]
+        // youtube = [0.5, 1, 1.5, 2]
+        // flash = [0.75, 1, 1.25, 1.5]
+        //
+        // if the newSpeed is not supported by current player type use
+        // `1.0` instead.
+
         if (_.indexOf(this.speeds, newSpeed) !== -1) {
             this.speed = newSpeed;
         } else {
             this.speed = '1.0';
-        }
-
-        if (updateCookie) {
-            $.cookie('video_speed', this.speed, {
-                expires: 3650,
-                path: '/'
-            });
         }
     }
 
@@ -647,8 +648,9 @@ function (VideoPlayer) {
      *
      *     state.videoPlayer.pause({'param1': 10});
      */
-    function trigger(objChain, extraParameters) {
-        var i, tmpObj, chain;
+    function trigger(objChain) {
+        var extraParameters = Array.prototype.slice.call(arguments, 1),
+            i, tmpObj, chain;
 
         // Remember that 'this' is the 'state' object.
         tmpObj = this;
@@ -670,7 +672,7 @@ function (VideoPlayer) {
             }
         }
 
-        tmpObj(extraParameters);
+        tmpObj.apply(this, extraParameters);
 
         return true;
     }
