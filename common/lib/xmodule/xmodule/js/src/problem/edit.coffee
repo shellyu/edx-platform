@@ -244,14 +244,27 @@ class @MarkdownEditingDescriptor extends XModule.Descriptor
           var answersList = p.replace(/^(or)?=\s*/gm, '').split('\n'),
 
               processNumericalResponse = function (value) {
-                  var floatValue = parseFloat(value), params, answer, string;
+                  var params, answer, string;
 
-                  if (isNaN(floatValue)) {
+                  if (_.contains(['[', '('], value[0])) { // [5, 7) or (5, 7)  - range tolerance case
+                    /*var borders =  value.replace('\[\(\]\)', '').replace(/ /g,'').split(',');
+                    if (_.reject(borders, parseFloat).length != 0) {
+                      return false;
+                    }
+                    string = '<numericalresponse answer="' + borders[0] + '">\n';
+                    string += '  <responseparam type="range_tolerance" left="0" right="' + borders[1] +
+                      '" include_left="' + ((_.contains(value,'[')) ? 'yes' : 'no') +
+                      '" include_right="' + ((_.contains(value,']')) ? 'yes' : 'no') + '"/>\n';*/
+                    //return string;
+                    return '5'
+                  }
+
+                  if (isNaN(parseFloat(value))) {
                       return false;
                   }
 
                   // Tries to extract parameters from string like 'expr +- tolerance'
-                  params = /(.*?)\+\-\s*(.*?$)/.exec(value);
+                  params_tol_1 = /(.*?)\+\-\s*(.*?$)/.exec(value);
 
                   if(params) {
                       answer = params[1].replace(/\s+/g, ''); // support inputs like 5*2 +- 10

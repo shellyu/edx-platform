@@ -834,6 +834,7 @@ class NumericalResponse(LoncapaResponse):
     def __init__(self, *args, **kwargs):
         self.correct_answer = ''
         self.tolerance = default_tolerance
+        self.range_tolerance = False
         super(NumericalResponse, self).__init__(*args, **kwargs)
 
     def setup_response(self):
@@ -848,6 +849,18 @@ class NumericalResponse(LoncapaResponse):
         )
         if tolerance_xml:  # If it isn't an empty list...
             self.tolerance = contextualize_text(tolerance_xml[0], context)
+
+        # Find right range tolerance
+        range_tolerance_xml = xml.xpath(
+            '//*[@id=$id]//responseparam[@type="range_tolerance"]/@default',
+            id=xml.get('id')
+        )
+
+        if range_tolerance_xml:  # If it isn't an empty list...
+            import ipdb; ipdb.set_trace()
+            # self.left_tolerance = contextualize_text(tolerance_xml[0], context)
+            # self.right_tolerance = contextualize_text(tolerance_xml[0], context)
+            # self.range_tolerance = True
 
     def get_staff_ans(self):
         """
