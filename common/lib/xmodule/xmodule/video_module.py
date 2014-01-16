@@ -115,12 +115,6 @@ class VideoFields(object):
         scope=Scope.settings,
         default=""
     )
-
-    position = Float(
-        help="Last video position stored by student.",
-        scope=Scope.user_state,
-        default=0
-    )
     speed = Float(
         help="Speed that is used for the video.",
         scope=Scope.user_state,
@@ -169,7 +163,7 @@ class VideoModule(VideoFields, XModule):
 
     def handle_ajax(self, dispatch, data):
         ''' get = request.POST instance '''
-        ACCEPTED_KEYS = ['position', 'speed']
+        ACCEPTED_KEYS = ['speed']
 
         if dispatch == 'save_user_state':
             for key in data:
@@ -202,7 +196,6 @@ class VideoModule(VideoFields, XModule):
             'caption_asset_path': caption_asset_path,
             'end': self.end_time.total_seconds(),
             'id': self.location.html_id(),
-            'position': self.position,
             'show_captions': json.dumps(self.show_captions),
             'sources': sources,
             'speed': self.speed or self.global_speed,
