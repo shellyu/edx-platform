@@ -377,7 +377,6 @@ function (VideoPlayer) {
         }
         this.config.ytTestTimeout = tempYtTestTimeout;
 
-        this.position = data['position'];
         this.speed = data['speed'].toFixed(2).replace(/\.00$/, '.0') || '1.0';
 
         if (!(_parseYouTubeIDs(this))) {
@@ -590,18 +589,17 @@ function (VideoPlayer) {
         // flash =          [0.75, 1, 1.25, 1.5]
         // html5 =          [0.75, 1, 1.25, 1.5]
         // youtube html5 =  [0.25, 0.5, 1, 1.5, 2]
-        debugger
+        var map = {
+            '0.25': '0.75',
+            '0.5': '0.75',
+            '0.75': '0.5',
+            '1.25': '1.5',
+            '2.0': '1.5'
+        };
+
         if (_.indexOf(this.speeds, newSpeed) !== -1) {
             this.speed = newSpeed;
         } else {
-            var map = {
-                '0.25': '0.75',
-                '0.5': '0.75',
-                '0.75': '0.5',
-                '1.25': '1.5',
-                '2.0': '1.5'
-            };
-
             this.speed = map[newSpeed] || '1.0';
         }
     }

@@ -416,15 +416,6 @@ function (HTML5Video, Resizer) {
         this.videoPlayer.updatePlayTime(time);
 
         this.el.trigger('ended', arguments);
-
-        // $.ajax({
-        //     url: this.config.saveStateUrl,
-        //     type: 'POST',
-        //     dataType: 'json',
-        //     data: {
-        //         position: 0
-        //     },
-        // });
     }
 
     function onPause() {
@@ -445,15 +436,6 @@ function (HTML5Video, Resizer) {
         }
 
         this.el.trigger('pause', arguments);
-
-        $.ajax({
-            url: this.config.saveStateUrl,
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                position: this.videoPlayer.currentTime
-            },
-        });
     }
 
     function onPlay() {
