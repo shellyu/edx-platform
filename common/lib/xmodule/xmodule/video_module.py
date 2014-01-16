@@ -122,7 +122,11 @@ class VideoFields(object):
         default=0
     )
     speed = Float(
-        help="Video speed.",
+        help="Speed that is used for the video.",
+        scope=Scope.user_state,
+    )
+    global_speed = Float(
+        help="Speed that is used for videos that have never watched before.",
         scope=Scope.preferences,
         default=1.0
     )
@@ -171,6 +175,9 @@ class VideoModule(VideoFields, XModule):
             for key in data:
                 if hasattr(self, key) and key in ACCEPTED_KEYS:
                     setattr(self, key, json.loads(data[key]))
+                    if key == 'speed':
+                        self.global_speed = self.speed
+
             return json.dumps({'success': True})
 
         log.debug(u"GET {0}".format(data))
@@ -198,7 +205,7 @@ class VideoModule(VideoFields, XModule):
             'position': self.position,
             'show_captions': json.dumps(self.show_captions),
             'sources': sources,
-            'speed': self.speed,
+            'speed': self.speed or self.global_speed,
             'start': self.start_time.total_seconds(),
             'sub': self.sub,
             'track': self.track,

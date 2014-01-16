@@ -586,17 +586,23 @@ function (VideoPlayer) {
     }
 
     function setSpeed(newSpeed) {
-        // html5 = [0.5, 1, 1.25, 1.5]
-        // youtube = [0.5, 1, 1.5, 2]
-        // flash = [0.75, 1, 1.25, 1.5]
-        //
-        // if the newSpeed is not supported by current player type use
-        // `1.0` instead.
-
+        // Possible speeds for each player type.
+        // flash =          [0.75, 1, 1.25, 1.5]
+        // html5 =          [0.75, 1, 1.25, 1.5]
+        // youtube html5 =  [0.25, 0.5, 1, 1.5, 2]
+        debugger
         if (_.indexOf(this.speeds, newSpeed) !== -1) {
             this.speed = newSpeed;
         } else {
-            this.speed = '1.0';
+            var map = {
+                '0.25': '0.75',
+                '0.5': '0.75',
+                '0.75': '0.5',
+                '1.25': '1.5',
+                '2.0': '1.5'
+            };
+
+            this.speed = map[newSpeed] || '1.0';
         }
     }
 
