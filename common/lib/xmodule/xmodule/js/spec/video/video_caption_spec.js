@@ -20,7 +20,6 @@
         });
 
         afterEach(function () {
-            YT.Player = undefined;
             $('.subtitles').remove();
 
             // `source` tags should be removed to avoid memory leak bug that we
